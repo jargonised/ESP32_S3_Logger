@@ -5,11 +5,18 @@
  */
 #pragma once
 
-#include "sdkconfig.h"
+#include "sdkconfig.h" // ESP-IDF configuration header
 #ifdef CONFIG_ARDUINO_RUNNING_CORE
-#include <Arduino.h>
+    #include <Arduino.h>
 #endif
+
+// Esspresif's hardware abstraction
+// Gives types LCD, Touch
 #include "esp_display_panel.hpp"
+
+//LVGL API
+// lv_timer_t, lv_obj_t
+// display driver registration, drawing and UI primitives
 #include "lvgl.h"
 
 // *INDENT-OFF*
@@ -36,10 +43,11 @@
  *      - Lager buffer size can improve FPS, but it will occupy more memory. Maximum buffer size is `width * height`.
  *      - The number of buffers should be 1 or 2.
  */
-#define LVGL_PORT_BUFFER_MALLOC_CAPS            (MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT)       // Allocate LVGL buffer in SRAM
-// #define LVGL_PORT_BUFFER_MALLOC_CAPS            (MALLOC_CAP_SPIRAM)      // Allocate LVGL buffer in PSRAM
-#define LVGL_PORT_BUFFER_SIZE_HEIGHT            (20)
-#define LVGL_PORT_BUFFER_NUM                    (2)
+#define LVGL_PORT_BUFFER_MALLOC_CAPS (MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT)
+// #define LVGL_PORT_BUFFER_MALLOC_CAPS            (MALLOC_CAP_INTERNAL)       // Allocate LVGL buffer in SRAM (faster than PSRAM), fast accessm DMA-safe
+// #define LVGL_PORT_BUFFER_MALLOC_CAPS            (MALLOC_CAP_8BIT)      // Byte-addresable memory, required for pixel buffers
+#define LVGL_PORT_BUFFER_SIZE_HEIGHT            (10) // draws(X)lines at a time
+#define LVGL_PORT_BUFFER_NUM                    (1)
 
 /**
  * LVGL timer handle task related parameters, can be adjusted by users
@@ -49,9 +57,9 @@
 #define LVGL_PORT_TASK_STACK_SIZE               (6 * 1024)  // The stack size of the LVGL timer task, in bytes
 #define LVGL_PORT_TASK_PRIORITY                 (2)         // The priority of the LVGL timer task
 #ifdef ARDUINO_RUNNING_CORE
-#define LVGL_PORT_TASK_CORE                     (ARDUINO_RUNNING_CORE)  // Valid if using Arduino
+    #define LVGL_PORT_TASK_CORE                     (ARDUINO_RUNNING_CORE)  // Valid if using Arduino
 #else
-#define LVGL_PORT_TASK_CORE                     (1)                     // Valid if using ESP-IDF
+    #define LVGL_PORT_TASK_CORE                     (1)                     // Valid if using ESP-IDF
 #endif
                                                             // The core of the LVGL timer task, `-1` means the don't specify the core
                                                             // Default is the same as the main core
@@ -71,10 +79,10 @@
  *      - 3: LCD double-buffer & LVGL direct-mode (recommended)
  */
 #ifdef CONFIG_LVGL_PORT_AVOID_TEARING_MODE
-#define LVGL_PORT_AVOID_TEARING_MODE            (CONFIG_LVGL_PORT_AVOID_TEARING_MODE)
+    #define LVGL_PORT_AVOID_TEARING_MODE            (CONFIG_LVGL_PORT_AVOID_TEARING_MODE)
                                                         // Valid if using ESP-IDF
 #else
-#define LVGL_PORT_AVOID_TEARING_MODE            (3)     // Valid if using Arduino
+    #define LVGL_PORT_AVOID_TEARING_MODE            (0)     // Valid if using Arduino
 #endif
 
 #if LVGL_PORT_AVOID_TEARING_MODE != 0
@@ -88,12 +96,12 @@
  *      - 180: 180 degree
  *      - 270: 270 degree
  */
-#ifdef CONFIG_LVGL_PORT_ROTATION_DEGREE
-#define LVGL_PORT_ROTATION_DEGREE               (CONFIG_LVGL_PORT_ROTATION_DEGREE)
+    #ifdef CONFIG_LVGL_PORT_ROTATION_DEGREE
+        #define LVGL_PORT_ROTATION_DEGREE               (CONFIG_LVGL_PORT_ROTATION_DEGREE)
                                                         // Valid if using ESP-IDF
-#else
-#define LVGL_PORT_ROTATION_DEGREE               (0)     // Valid if using Arduino
-#endif
+    #else
+        #define LVGL_PORT_ROTATION_DEGREE               (0)     // Valid if using Arduino
+    #endif
 
 /**
  * Here, some important configurations will be set based on different anti-tearing modes and rotation angles.
@@ -102,36 +110,36 @@
  * Users should use `lcd_bus->configRgbFrameBufferNumber(LVGL_PORT_DISP_BUFFER_NUM);` to set the buffer number before. If screen drifting occurs, please refer to the Troubleshooting section in the README.
  * initializing the LCD bus
  */
-#define LVGL_PORT_AVOID_TEAR                    (1)
+    #define LVGL_PORT_AVOID_TEAR                    (1)
 // Set the buffer number and refresh mode according to the different modes
-#if LVGL_PORT_AVOID_TEARING_MODE == 1
-    #define LVGL_PORT_DISP_BUFFER_NUM           (2)
-    #define LVGL_PORT_FULL_REFRESH              (1)
-#elif LVGL_PORT_AVOID_TEARING_MODE == 2
-    #define LVGL_PORT_DISP_BUFFER_NUM           (3)
-    #define LVGL_PORT_FULL_REFRESH              (1)
-#elif LVGL_PORT_AVOID_TEARING_MODE == 3
-    #define LVGL_PORT_DISP_BUFFER_NUM           (2)
-    #define LVGL_PORT_DIRECT_MODE               (1)
-#else
-    #error "Invalid avoid tearing mode, please set macro `LVGL_PORT_AVOID_TEARING_MODE` to one of `LVGL_PORT_AVOID_TEARING_MODE_*`"
-#endif
-// Check rotation
-#if (LVGL_PORT_ROTATION_DEGREE != 0) && (LVGL_PORT_ROTATION_DEGREE != 90) && (LVGL_PORT_ROTATION_DEGREE != 180) && \
-    (LVGL_PORT_ROTATION_DEGREE != 270)
-    #error "Invalid rotation degree, please set to 0, 90, 180 or 270"
-#elif LVGL_PORT_ROTATION_DEGREE != 0
-    #ifdef LVGL_PORT_DISP_BUFFER_NUM
-        #undef LVGL_PORT_DISP_BUFFER_NUM
+    #if LVGL_PORT_AVOID_TEARING_MODE == 1
+        #define LVGL_PORT_DISP_BUFFER_NUM           (2)
+        #define LVGL_PORT_FULL_REFRESH              (1)
+    #elif LVGL_PORT_AVOID_TEARING_MODE == 2
         #define LVGL_PORT_DISP_BUFFER_NUM           (3)
+        #define LVGL_PORT_FULL_REFRESH              (1)
+    #elif LVGL_PORT_AVOID_TEARING_MODE == 3
+        #define LVGL_PORT_DISP_BUFFER_NUM           (2)
+        #define LVGL_PORT_DIRECT_MODE               (1)
+    #else
+        #error "Invalid avoid tearing mode, please set macro `LVGL_PORT_AVOID_TEARING_MODE` to one of `LVGL_PORT_AVOID_TEARING_MODE_*`"
     #endif
-#endif
+// Check rotation
+        #if (LVGL_PORT_ROTATION_DEGREE != 0) && (LVGL_PORT_ROTATION_DEGREE != 90) && (LVGL_PORT_ROTATION_DEGREE != 180) && \
+            (LVGL_PORT_ROTATION_DEGREE != 270)
+            #error "Invalid rotation degree, please set to 0, 90, 180 or 270"
+        #elif LVGL_PORT_ROTATION_DEGREE != 0
+            #ifdef LVGL_PORT_DISP_BUFFER_NUM
+                #undef LVGL_PORT_DISP_BUFFER_NUM
+                #define LVGL_PORT_DISP_BUFFER_NUM           (3)
+            #endif
+        #endif
 #endif /* LVGL_PORT_AVOID_TEARING_MODE */
 
 // *INDENT-ON*
 
 #ifdef __cplusplus
-extern "C" {
+    extern "C" {
 #endif
 
 /**

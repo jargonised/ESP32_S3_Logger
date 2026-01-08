@@ -4,23 +4,58 @@
  * SPDX-License-Identifier: CC0-1.0
  */
 
+// ESP-IDF high-resolution timer
+// For LVGL tick (lv_tick_inc)
+// Resolution - in microseconds
 #include "esp_timer.h"
+
+// Sets log tag to "LvPort"
+// Enables:
+    // ESP_UTILS_LOGD
+    // ESP_UTILS_LOGI
+    // ESP_UTILS_CHECK_*
+// These are safe-guard macros that:
+    // log errors
+    // return early on failure
+    // prevent crashes
 #undef ESP_UTILS_LOG_TAG
 #define ESP_UTILS_LOG_TAG "LvPort"
 #include "esp_lib_utils.h"
+
+// Pulls in configuration macros and function declarations
 #include "lvgl_v8_port.h"
+
 
 using namespace esp_panel::drivers;
 
 #define LVGL_PORT_ENABLE_ROTATION_OPTIMIZED     (1)
 #define LVGL_PORT_BUFFER_NUM_MAX                (2)
 
+// Globals
+// Recursive mutex protecting LVGL (LVGL can call itself indirectly)
+// without this multi-task UI access = crash
 static SemaphoreHandle_t lvgl_mux = nullptr;                  // LVGL mutex
+// Handle for the LVGL task
+// for notifications and teardown
 static TaskHandle_t lvgl_task_handle = nullptr;
+// Timer - generates LVGL ticks
+// Drives animations, timers, transitions
 static esp_timer_handle_t lvgl_tick_timer = NULL;
+// Pointers to LVGL draw buffers
+//  Points to:
+    // heap memory (classic mode)
+    // framebuffer memory (avoid-tearing mode)
 static void *lvgl_buf[LVGL_PORT_BUFFER_NUM_MAX] = {};
 
+// Rotation helpers
+// When rotation ≠ 0 and avoid-tearing is enabled:
+    // LVGL cannot rely on hardware rotation
+    // Pixels must be copied + rotated manually
 #if LVGL_PORT_ROTATION_DEGREE != 0
+// Framebuffer selection helper
+// Alternates between framebuffer 0 and 1
+// Used in double-buffered RGB mode
+// Prevents overwriting the buffer currently scanned by LCD
 static void *get_next_frame_buffer(LCD *lcd)
 {
     static void *next_fb = NULL;
@@ -37,6 +72,10 @@ static void *get_next_frame_buffer(LCD *lcd)
     return next_fb;
 }
 
+// Pixel copy helpers
+// Inline functions (runs inside inner loops, performance critical)
+// Copy exactly one pixel
+// Specialized by color depth
 __attribute__((always_inline))
 static inline void copy_pixel_8bpp(uint8_t *to, const uint8_t *from)
 {
@@ -60,6 +99,12 @@ static inline void copy_pixel_24bpp(uint8_t *to, const uint8_t *from)
 #define _COPY_PIXEL(_bpp, to, from) copy_pixel_##_bpp##bpp(to, from)
 #define COPY_PIXEL(_bpp, to, from)  _COPY_PIXEL(_bpp, to, from)
 
+// Rotation macros
+// Index source & destination buffers
+// Do exact pixel relocation
+// Exist as macros to:
+    // avoid function-call overhead
+    // allow compile-time unrolling
 #define ROTATE_90_ALL_BPP() \
     { \
         to_bytes_per_line = h * to_bytes_per_piexl; \
@@ -81,6 +126,9 @@ static inline void copy_pixel_24bpp(uint8_t *to, const uint8_t *from)
  * @note  ESP32-P4 1024x600 full-screen: 738ms -> 34ms
  * @note  ESP32-S3 480x480  full-screen: 380ms -> 37ms
  */
+
+// Can copy 4 pixels at once using 32-bit loads
+// Matters on 1024×600.
 #define ROTATE_90_OPTIMIZED_16BPP(block_w, block_h) \
     { \
         for (int i = 0; i < h; i += block_h) { \
@@ -151,6 +199,7 @@ static inline void copy_pixel_24bpp(uint8_t *to, const uint8_t *from)
         } \
     }
 
+// Software rotation engine
 __attribute__((always_inline))
 IRAM_ATTR static inline void rotate_copy_pixel(
     const uint8_t *from, uint8_t *to, uint16_t x_start, uint16_t y_start, uint16_t x_end, uint16_t y_end, uint16_t w,
@@ -200,6 +249,8 @@ IRAM_ATTR static inline void rotate_copy_pixel(
 }
 #endif /* LVGL_PORT_ROTATION_DEGREE */
 
+// Flush callback
+// copies old data to the next framebuffer
 #if LVGL_PORT_AVOID_TEAR
 #if LVGL_PORT_DIRECT_MODE
 #if LVGL_PORT_ROTATION_DEGREE != 0

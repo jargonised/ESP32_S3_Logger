@@ -15,7 +15,7 @@
 
 #pragma once
 
-#define ESP_PANEL_USE_1024_600_LCD           (0)     // 0: 800x480, 1: 1024x600
+#define ESP_PANEL_USE_1024_600_LCD           (1)     // 0: 800x480, 1: 1024x600
 #define ESP_OPEN_TOUCH 1 // 1 initiates the touch, 0 closes the touch.
 
 /**
@@ -218,7 +218,7 @@
  * So it is not necessary to set the macro to `1`. For other drivers (like `Wire`), please set the macro to `1`
  * ensure that the host is initialized only once.
  */
-#define ESP_PANEL_BOARD_TOUCH_BUS_SKIP_INIT_HOST        (0)     // 0/1. Typically set to 0
+    #define ESP_PANEL_BOARD_TOUCH_BUS_SKIP_INIT_HOST        (0)     // 0/1. Typically set to 0
 #endif
 
 /**
@@ -295,6 +295,7 @@
     /**
      * @brief Backlight control pin configuration
      */
+     // Backlight controlled via CH422G expander, not ESP32 GPIO
     #define ESP_PANEL_BOARD_BACKLIGHT_IO        (2)    // Output GPIO pin number
     #define ESP_PANEL_BOARD_BACKLIGHT_ON_LEVEL  (1)     // Active level, 0: low, 1: high
 
