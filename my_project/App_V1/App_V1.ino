@@ -41,6 +41,23 @@ using namespace esp_panel::board;
 /////////////////////////////////////////////////////
 
 /////////////////////////////////////////////////////
+static bool btn_styles_initialized = false;
+static bool clk_styles_initialized = false;
+/////////////////////////////////////////////////////
+
+/////////////////////////////////////////////////////
+// Button styles definitions
+static lv_style_t style_btn;
+static lv_style_t style_button_pressed;
+static lv_style_t style_button_red;
+/////////////////////////////////////////////////////
+
+/////////////////////////////////////////////////////
+// Clock styles definitions
+static lv_style_t style_clk;
+/////////////////////////////////////////////////////
+
+/////////////////////////////////////////////////////
 // Global handles to LVGL objects
 // Weather
 lv_obj_t *label_temp;
@@ -138,16 +155,11 @@ void ui_init_cb(lv_timer_t *t)
       //LV_PART_MAIN
     //);
     
-    //lv_obj_t *label = lv_label_create(scr);
-    //lv_label_set_text(label, "LVGL IS ALIVE");
 
-    //lv_obj_set_style_text_color(label, lv_color_white(), 0);
-
-    //lv_obj_center(label);
+    createAppUi();
 
     lv_timer_create(clock_timer_cb, 1000, NULL);
 
-    createAppUi();
     
 
 
@@ -196,6 +208,138 @@ void lcdTask(void *arg)
 /////////////////////////////////////////////////////
 
 /////////////////////////////////////////////////////
+// Style helper functions
+static lv_color_t darken(const lv_color_filter_dsc_t * dsc, lv_color_t color, lv_opa_t opa)
+{
+    LV_UNUSED(dsc);
+    return lv_color_darken(color, opa);
+}
+/////////////////////////////////////////////////////
+
+/////////////////////////////////////////////////////
+// Style initialization
+static void button_style_init(void)
+{
+  // To avoid buttons re-initiallization each time the UI is created
+  if (btn_styles_initialized)
+    return;
+  btn_styles_initialized = true;
+    /*Create a simple button style*/
+    lv_style_init(&style_btn);
+    lv_style_set_radius(&style_btn, 10);
+    lv_style_set_bg_opa(&style_btn, LV_OPA_COVER);
+    lv_style_set_bg_color(&style_btn, lv_palette_lighten(LV_PALETTE_GREY, 3));
+    lv_style_set_bg_grad_color(&style_btn, lv_palette_main(LV_PALETTE_GREY));
+    lv_style_set_bg_grad_dir(&style_btn, LV_GRAD_DIR_VER);
+
+    lv_style_set_border_color(&style_btn, lv_color_black());
+    lv_style_set_border_opa(&style_btn, LV_OPA_20);
+    lv_style_set_border_width(&style_btn, 2);
+
+    lv_style_set_text_color(&style_btn, lv_color_black());
+
+    /*Create a style for the pressed state.
+     *Use a color filter to simply modify all colors in this state*/
+    static lv_color_filter_dsc_t color_filter;
+    lv_color_filter_dsc_init(&color_filter, darken);
+    lv_style_init(&style_button_pressed);
+    lv_style_set_color_filter_dsc(&style_button_pressed, &color_filter);
+    lv_style_set_color_filter_opa(&style_button_pressed, LV_OPA_20);
+
+    /*Create a red style. Change only some colors.*/
+    lv_style_init(&style_button_red);
+    lv_style_set_bg_color(&style_button_red, lv_palette_main(LV_PALETTE_RED));
+    lv_style_set_bg_grad_color(&style_button_red, lv_palette_lighten(LV_PALETTE_RED, 3));
+}
+/////////////////////////////////////////////////////
+
+/////////////////////////////////////////////////////
+// Style initialization
+static void clock_style_init(void)
+{
+  // To avoid clock re-initiallization each time the UI is created
+  if (clk_styles_initialized)
+    return;
+  clk_styles_initialized = true;
+    /*Create a simple clock style*/
+    lv_style_init(&style_clk);
+    lv_style_set_bg_color(&style_clk, lv_color_hex(0x333333)); // ciemne tło
+    lv_style_set_bg_opa(&style_clk, LV_OPA_80); // półprzezroczystość
+    lv_style_set_radius(&style_clk, 10); // zaokrąglone rogi
+    lv_style_set_border_width(&style_clk, 0); // bez ramki
+}
+/////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////
+void createControlButtons(lv_obj_t *parent)
+{
+  /*Initialize the style*/
+  button_style_init();
+
+  /*Create a button and use the new styles*/
+  lv_obj_t *btn_current_info = lv_btn_create(parent);
+  /* Remove the styles coming from the theme
+   * Note that size and position are also stored as style properties
+   * so lv_obj_remove_style_all will remove the set size and position too */
+  lv_obj_remove_style_all(btn_current_info);
+  lv_obj_set_size(btn_current_info, 160, 50);
+  lv_obj_add_style(btn_current_info, &style_btn, 0);
+  lv_obj_add_style(btn_current_info, &style_button_pressed, LV_STATE_PRESSED);
+
+  /*Add a label to the button*/
+  lv_obj_t *current_info = lv_label_create(btn_current_info);
+  lv_label_set_text(current_info, "Increase temp");
+  lv_obj_center(current_info);
+
+  lv_obj_add_event_cb(btn_current_info, btn_event_cb, LV_EVENT_CLICKED, NULL);
+}
+/////////////////////////////////////////////////////
+
+/////////////////////////////////////////////////////
+void createClockWidget(lv_obj_t *parent)
+{
+  /*Initialize the style*/
+  clock_style_init();
+
+  // Create clock container
+  clock_container = lv_obj_create(parent);
+  lv_obj_remove_style_all(clock_container);
+  lv_obj_add_style(clock_container, &style_clk, 0);
+
+  lv_obj_set_size(clock_container, 180, 70);
+  lv_obj_align(clock_container, LV_ALIGN_BOTTOM_RIGHT, -10, -10);
+
+  // Create clock label
+  label_clock = lv_label_create(clock_container);
+  lv_label_set_text(label_clock, "--:--:--\n--.--.----");
+
+  lv_obj_set_style_text_color(label_clock, lv_color_white(), 0);
+  lv_obj_set_style_text_align(label_clock, LV_TEXT_ALIGN_CENTER, 0);
+  lv_obj_center(label_clock);
+}
+/////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////
+// Button event callback
+static void btn_event_cb(lv_event_t *e)
+{
+  lv_event_code_t code = lv_event_get_code(e);
+  lv_obj_t *btn = lv_event_get_target(e);
+
+  if (code == LV_EVENT_CLICKED) {
+    Serial.println("Button clicked");
+
+    // Example: change global temperature
+    xSemaphoreTake(temp_mutex, portMAX_DELAY);
+    g_temperature += 0.5f;
+    xSemaphoreGive(temp_mutex);
+  }
+}
+/////////////////////////////////////////////////////
+
+/////////////////////////////////////////////////////
 void createAppUi()
 {
       lv_obj_t *scr = lv_obj_create(lv_scr_act());
@@ -223,9 +367,14 @@ void createAppUi()
     lv_label_set_text(label_pressure, "Pobieranie cisnienia...");
     lv_obj_set_style_text_color(label_pressure, lv_color_white(), 0);
 
-    label_clock = lv_label_create(scr);
-    lv_label_set_text(label_clock, "--:--:--");
-    lv_obj_set_style_text_color(label_clock, lv_color_white(), 0);
+    //label_clock = lv_label_create(scr);
+    //lv_label_set_text(label_clock, "--:--:--");
+    //lv_obj_set_style_text_color(label_clock, lv_color_white(), 0);
+
+    createClockWidget(scr);
+
+
+    createControlButtons(scr);
 
 }
 /////////////////////////////////////////////////////
@@ -316,7 +465,7 @@ void humidityTimer(lv_timer_t *t)
   xSemaphoreGive(humidity_mutex);
 
   char buff[64];
-  snprintf(buff, sizeof(buff), "Wilgotnosc: %.2f %", humidity_copy);
+  snprintf(buff, sizeof(buff), "Wilgotnosc: %.2f %%", humidity_copy);
 
   lv_label_set_text(label_humidity, buff);
 }
@@ -324,7 +473,7 @@ void humidityTimer(lv_timer_t *t)
 
 /////////////////////////////////////////////////////
 //
-// Timer for pressure refreshes
+// Timer for pressure task
 // Runs inside the LVGL task
 //
 void pressureTimer(lv_timer_t *t)
@@ -415,9 +564,7 @@ void setup()
     
     //configTzTime("CET-1CEST,M3.5.0,M10.5.0/3", "pool.ntp.org");
 
-    //Serial.println("Initializing board");
-    //Board *board = new Board();
-   // board->init();
+
 
    // #if LVGL_PORT_AVOID_TEARING_MODE
    //auto lcd = board->getLCD();
@@ -462,21 +609,6 @@ void setup()
     // lv_img_set_src(img, &Desktop_5);
     // lv_obj_center(img);  // opcjonalnie, wyśrodkuj
 
-     /**
-     * Create the simple labels
-     */
-    // lv_obj_t *label_1 = lv_label_create(lv_scr_act());
-    // lv_label_set_text(label_1, "Hello World!");
-    // lv_obj_set_style_text_font(label_1, &lv_font_montserrat_30, 0);
-    // lv_obj_align(label_1, LV_ALIGN_CENTER, 0, -20);
-
-    // lv_obj_t *label_2 = lv_label_create(lv_scr_act());
-    // lv_label_set_text_fmt(
-    //     label_2, "ESP32_Display_Panel (%d.%d.%d)",
-    //     ESP_PANEL_VERSION_MAJOR, ESP_PANEL_VERSION_MINOR, ESP_PANEL_VERSION_PATCH
-    // );
-    // lv_obj_set_style_text_font(label_2, &lv_font_montserrat_16, 0);
-    // lv_obj_align_to(label_2, label_1, LV_ALIGN_OUT_BOTTOM_MID, 0, 10);
 
     // lv_obj_t *label_3 = lv_label_create(lv_scr_act());
     // lv_label_set_text_fmt(label_3, "LVGL (%d.%d.%d)", LVGL_VERSION_MAJOR, LVGL_VERSION_MINOR, LVGL_VERSION_PATCH);
@@ -555,7 +687,6 @@ void setup()
 
     /* Release the mutex */
     //lvgl_port_unlock();
-    //Serial.println("LVGL UI created");
 
 }
 
@@ -574,7 +705,6 @@ void loop() {
     // }
 //}
 
-//lv_timer_handler();   // <<<<<<<<<<<<<< REQUIRED
 
     //delay(30); // mniejszy delay = lepszy LVGL
     delay(1000);
