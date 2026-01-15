@@ -608,7 +608,7 @@ static lv_disp_t *display_init(LCD *lcd)
     ESP_UTILS_CHECK_FALSE_RETURN(lcd->getRefreshPanelHandle() != nullptr, nullptr, "LCD device is not initialized");
 
     static lv_disp_draw_buf_t disp_buf;
-    static lv_disp_drv_t disp_drv;
+    static lv_disp_drv_t disp_drv; // Descriptor of a display driver
 
     // Alloc draw buffers used by LVGL
     auto lcd_width = lcd->getFrameWidth();
@@ -654,8 +654,8 @@ static lv_disp_t *display_init(LCD *lcd)
     lv_disp_draw_buf_init(&disp_buf, lvgl_buf[0], lvgl_buf[1], buffer_size);
 
     ESP_UTILS_LOGD("Register display driver to LVGL");
-    lv_disp_drv_init(&disp_drv);
-    disp_drv.flush_cb = flush_callback;
+    lv_disp_drv_init(&disp_drv); // Display driver initialization
+    disp_drv.flush_cb = flush_callback; // Set driver function
 #if (LVGL_PORT_ROTATION_DEGREE == 90) || (LVGL_PORT_ROTATION_DEGREE == 270)
     disp_drv.hor_res = lcd_height;
     disp_drv.ver_res = lcd_width;
@@ -678,7 +678,7 @@ static lv_disp_t *display_init(LCD *lcd)
         disp_drv.sw_rotate = 1;
     }
 #endif /* LVGL_PORT_AVOID_TEAR */
-    disp_drv.draw_buf = &disp_buf;
+    disp_drv.draw_buf = &disp_buf; // Assign the buffer to the display
     disp_drv.user_data = (void *)lcd;
     // Only available when the coordinate alignment is enabled
     if ((lcd->getBasicAttributes().basic_bus_spec.x_coord_align > 1) ||
@@ -686,7 +686,7 @@ static lv_disp_t *display_init(LCD *lcd)
         disp_drv.rounder_cb = rounder_callback;
     }
 
-    return lv_disp_drv_register(&disp_drv);
+    return lv_disp_drv_register(&disp_drv); // Register the driver
 }
 
 static void touchpad_read(lv_indev_drv_t *indev_drv, lv_indev_data_t *data)
@@ -710,15 +710,15 @@ static lv_indev_t *indev_init(Touch *tp)
     ESP_UTILS_CHECK_FALSE_RETURN(tp != nullptr, nullptr, "Invalid touch device");
     ESP_UTILS_CHECK_FALSE_RETURN(tp->getPanelHandle() != nullptr, nullptr, "Touch device is not initialized");
 
-    static lv_indev_drv_t indev_drv_tp;
+    static lv_indev_drv_t indev_drv_tp; // Descriptor of an input device driver
 
     ESP_UTILS_LOGD("Register input driver to LVGL");
-    lv_indev_drv_init(&indev_drv_tp);
-    indev_drv_tp.type = LV_INDEV_TYPE_POINTER;
-    indev_drv_tp.read_cb = touchpad_read;
+    lv_indev_drv_init(&indev_drv_tp); // Basic initialization of an input device driver
+    indev_drv_tp.type = LV_INDEV_TYPE_POINTER; // Touch pad being a pointer-like device
+    indev_drv_tp.read_cb = touchpad_read; // Set driver function
     indev_drv_tp.user_data = (void *)tp;
 
-    return lv_indev_drv_register(&indev_drv_tp);
+    return lv_indev_drv_register(&indev_drv_tp); // Register the driver
 }
 
 #if !LV_TICK_CUSTOM
