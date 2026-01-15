@@ -295,12 +295,15 @@ void createControlButtons(lv_obj_t *parent)
   /*Create a button and use the new styles*/
   lv_obj_t *btn_current_info = lv_btn_create(btn_row);
   lv_obj_t *btn_stats = lv_btn_create(btn_row);
+  lv_obj_t *btn_settings = lv_btn_create(btn_row);
+
 
   /* Remove the styles coming from the theme
    * Note that size and position are also stored as style properties
    * so lv_obj_remove_style_all will remove the set size and position too */
   lv_obj_remove_style_all(btn_current_info);
   lv_obj_remove_style_all(btn_stats);
+  lv_obj_remove_style_all(btn_settings);
 
   // Apply style - current info
   lv_obj_set_size(btn_current_info, 160, 50);
@@ -311,6 +314,11 @@ void createControlButtons(lv_obj_t *parent)
   lv_obj_set_size(btn_stats, 160, 50);
   lv_obj_add_style(btn_stats, &style_btn, 0);
   lv_obj_add_style(btn_stats, &style_button_pressed, LV_STATE_PRESSED);
+
+    // Apply style - settings
+  lv_obj_set_size(btn_settings, 160, 50);
+  lv_obj_add_style(btn_settings, &style_btn, 0);
+  lv_obj_add_style(btn_settings, &style_button_pressed, LV_STATE_PRESSED);
 
 
   /*Add a label to the button*/
@@ -323,6 +331,11 @@ void createControlButtons(lv_obj_t *parent)
   lv_obj_t *stats = lv_label_create(btn_stats);
   lv_label_set_text(stats, "Statistics");
   lv_obj_center(stats);
+
+    // Add label - stats
+  lv_obj_t *settings = lv_label_create(btn_settings);
+  lv_label_set_text(settings, "Settings");
+  lv_obj_center(settings);
 
   lv_obj_add_event_cb(btn_current_info, btn_event_cb, LV_EVENT_CLICKED, NULL);
   //lv_obj_add_event_cb(btn_current_info, btn_event_cb, LV_EVENT_CLICKED, NULL);
