@@ -277,22 +277,57 @@ void createControlButtons(lv_obj_t *parent)
   /*Initialize the style*/
   button_style_init();
 
+  // Create a row container for buttons
+  lv_obj_t *btn_row = lv_obj_create(parent);
+  lv_obj_remove_style_all(btn_row);
+
+  lv_obj_set_width(btn_row, lv_pct(100));
+  lv_obj_set_layout(btn_row, LV_LAYOUT_FLEX);
+  lv_obj_set_flex_flow(btn_row, LV_FLEX_FLOW_ROW);
+  lv_obj_set_flex_align(
+        btn_row,
+        LV_FLEX_ALIGN_SPACE_EVENLY,  // horizontal
+        LV_FLEX_ALIGN_CENTER,        // vertical
+        LV_FLEX_ALIGN_CENTER
+    );
+
+  // Create buttons
   /*Create a button and use the new styles*/
-  lv_obj_t *btn_current_info = lv_btn_create(parent);
+  lv_obj_t *btn_current_info = lv_btn_create(btn_row);
+  lv_obj_t *btn_stats = lv_btn_create(btn_row);
+
   /* Remove the styles coming from the theme
    * Note that size and position are also stored as style properties
    * so lv_obj_remove_style_all will remove the set size and position too */
   lv_obj_remove_style_all(btn_current_info);
+  lv_obj_remove_style_all(btn_stats);
+
+  // Apply style - current info
   lv_obj_set_size(btn_current_info, 160, 50);
   lv_obj_add_style(btn_current_info, &style_btn, 0);
   lv_obj_add_style(btn_current_info, &style_button_pressed, LV_STATE_PRESSED);
 
+  // Apply style - stats
+  lv_obj_set_size(btn_stats, 160, 50);
+  lv_obj_add_style(btn_stats, &style_btn, 0);
+  lv_obj_add_style(btn_stats, &style_button_pressed, LV_STATE_PRESSED);
+
+
   /*Add a label to the button*/
+  // Add label - current info
   lv_obj_t *current_info = lv_label_create(btn_current_info);
-  lv_label_set_text(current_info, "Increase temp");
+  lv_label_set_text(current_info, "Current information");
   lv_obj_center(current_info);
 
+  // Add label - stats
+  lv_obj_t *stats = lv_label_create(btn_stats);
+  lv_label_set_text(stats, "Statistics");
+  lv_obj_center(stats);
+
   lv_obj_add_event_cb(btn_current_info, btn_event_cb, LV_EVENT_CLICKED, NULL);
+  //lv_obj_add_event_cb(btn_current_info, btn_event_cb, LV_EVENT_CLICKED, NULL);
+
+
 }
 /////////////////////////////////////////////////////
 
@@ -350,7 +385,7 @@ void createAppUi()
       LV_PART_MAIN
     );
 
-    lv_obj_set_size(scr, lv_pct(50), lv_pct(60));
+    lv_obj_set_size(scr, lv_pct(90), lv_pct(80));
     lv_obj_center(scr);
     lv_obj_set_layout(scr, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(scr, LV_FLEX_FLOW_COLUMN);
@@ -524,6 +559,7 @@ void setup()
     0   // core 0
     );
 
+
     xTaskCreatePinnedToCore(
     temperatureTask, // pointer to the task entry function
     "temperatureTask", // name of the task
@@ -534,7 +570,7 @@ void setup()
     0   // core 0
     );
 
-    
+
     xTaskCreatePinnedToCore(
     humidityTask, // pointer to the task entry function
     "humidityTask", // name of the task
@@ -643,46 +679,7 @@ void setup()
     //lv_label_set_text(label_czas, "Aktualizacja: --:--");
     //lv_obj_set_style_text_color(label_czas, lv_color_white(), 0);
 
-    // Przycisk
-    //lv_obj_t *btn = lv_btn_create(container);
-    //lv_obj_set_size(btn, 120, 40);
-    //lv_obj_center(btn); // lub zostaw bez centrowania — Flex ułoży automatycznie
-
-    //lv_obj_t *btn_label = lv_label_create(btn);
-    //lv_label_set_text(btn_label, "Odswiez");
-    //lv_obj_center(btn_label);
-
-    // Obsługa kliknięcia
-    //lv_obj_add_event_cb(btn, [](lv_event_t * e){
-    //    lv_obj_t *czas_lbl = (lv_obj_t *)lv_event_get_user_data(e);
-    //    fetchWeather(czas_lbl);
-    //}, LV_EVENT_CLICKED, label_czas);
-
     //fetchWeather(label_czas); // przekazujemy wskaźnik labela
-
-    // Kontener zegara
-    //clock_container = lv_obj_create(lv_scr_act());
-    //lv_obj_set_size(clock_container, 150, 50);
-    //lv_obj_align(clock_container, LV_ALIGN_BOTTOM_RIGHT, -10, -10);
-    //lv_obj_set_style_bg_color(clock_container, lv_color_hex(0x333333), 0); // ciemne tło
-    //lv_obj_set_style_radius(clock_container, 10, 0); // zaokrąglone rogi
-    //lv_obj_set_style_bg_opa(clock_container, LV_OPA_80, 0); // półprzezroczystość
-    //lv_obj_set_style_border_width(clock_container, 0, 0); // bez ramki
-
-    // Etykieta zegara
-    //label_clock = lv_label_create(clock_container);
-    //lv_obj_center(label_clock);
-    //lv_obj_set_style_text_color(label_clock, lv_color_white(), 0);
-    //lv_obj_set_style_text_font(label_clock, &lv_font_montserrat_16, 0);
-    //lv_label_set_text(label_clock, "--:--:--\n--.--.----");
-
-    /**
-     * Try an example. Don't forget to uncomment header.
-     * See all the examples online: https://docs.lvgl.io/master/examples.html
-     * source codes: https://github.com/lvgl/lvgl/tree/e7f88efa5853128bf871dde335c0ca8da9eb7731/examples
-     */
-    //  lv_example_btn_1();
-
 
 
     /* Release the mutex */
